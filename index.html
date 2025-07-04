@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>フリっ子</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 8s ease infinite;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+            padding: 10px;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .game-container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            border: 3px solid #667eea;
+        }
+
+        h1 {
+            font-size: 2.2em;
+            margin-bottom: 15px;
+            background: linear-gradient(45deg, #667eea, #764ba2, #f093fb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .menu {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 15px 0;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .pendulum-container {
+            position: relative;
+            width: 400px;
+            height: 320px;
+            margin: 20px auto;
+            display: none;
+            background: radial-gradient(circle at center, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+            border: 3px solid #667eea;
+            box-shadow: 0 0 30px rgba(102, 126, 234, 0.6);
+            overflow: visible;
+        }
+
+        .pendulum-container.active {
+            display: block;
+        }
+
+        .pendulum-pivot {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 25px;
+            height: 25px;
+            background: radial-gradient(circle, #212529, #495057);
+            border: 4px solid #fff;
+            border-radius: 50%;
+            box-shadow: 0 5px 18px rgba(0, 0, 0, 0.4);
+            z-index: 15;
+        }
+
+        .pendulum-string {
+            position: absolute;
+            top: 52px;
+            left: 50%;
+            width: 4px;
+            height: 180px;
+            background: linear-gradient(to bottom, #495057, #6c757d);
+            transform-origin: top center;
+            transform: translateX(-50%) rotate(0deg);
+            border-radius: 2px;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.4);
+            z-index: 10;
+        }
+
+        .pendulum-bob {
+            position: absolute;
+            bottom: -35px;
+            left: 50%;
+            width: 70px;
+            height: 70px;
+            background: radial-gradient(circle at 30% 30%, #667eea, #764ba2);
+            border: 5px solid #fff;
+            border-radius: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+            transition: all 0.1s ease;
+        }
+
+        .pendulum-bob.glowing {
+            background: radial-gradient(circle at 30% 30%, #ffd700, #ffed4e);
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.8), 0 6px 20px rgba(0, 0, 0, 0.5);
+            animation: perfectGlow 0.4s ease;
+        }
+
+        @keyframes perfectGlow {
+            0%, 100% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.15); }
+        }
+
+        .target-sector {
+            position: absolute;
+            top: 52px;
+            left: 50%;
+            width: 360px;
+            height: 180px;
+            transform: translateX(-50%);
+            pointer-events: none;
+        }
+
+        .sector-background {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 360px;
+            height: 180px;
+            background: conic-gradient(
+                from 90deg at 50% 0%, 
+                transparent 0deg, 
+                transparent var(--start-angle), 
+                rgba(46, 213, 115, 0.5) var(--start-angle), 
+                rgba(46, 213, 115, 0.5) var(--end-angle), 
+                transparent var(--end-angle), 
+                transparent 360deg
+            );
+            transform: translateX(-50%);
+            border-radius: 0 0 180px 180px;
+            border: 3px solid rgba(46, 213, 115, 0.8);
+            border-top: none;
+            animation: sectorPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes sectorPulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+
+        .vertical-indicator {
+            position: absolute;
+            top: 52px;
+            left: 50%;
+            width: 4px;
+            height: 180px;
+            background: linear-gradient(to bottom, rgba(255, 215, 0, 0.9), rgba(255, 237, 78, 0.7));
+            transform: translateX(-50%);
+            border-radius: 2px;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+            animation: indicatorGlow 1.5s ease-in-out infinite;
+        }
+
+        @keyframes indicatorGlow {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        .tap-button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            font-size: 1.8em;
+            font-weight: bold;
+            padding: 15px 40px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            margin: 15px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border: 3px solid #fff;
+        }
+
+        .tap-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(102, 126, 234, 0.6);
+        }
+
+        .tap-button:active {
+            transform: translateY(0);
+            animation: buttonPulse 0.3s ease;
+        }
+
+        .tap-button:disabled {
+            background: #999;
+            cursor: not-allowed;
+            transform: none;
+            opacity: 0.6;
+        }
+
+        @keyframes buttonPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .status {
+            font-size: 1.3em;
+            margin: 15px 0;
+            font-weight: bold;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .stats-display {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .stat-item {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 15px 10px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+            border: 2px solid #fff;
+        }
+
+        .stat-item h3 {
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+
+        .stat-value {
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .lives-display {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+        .life-heart {
+            font-size: 1.5em;
+            color: #ff4757;
+            animation: heartBeat 1.5s ease-in-out infinite;
+        }
+
+        .life-heart.lost {
+            color: #ccc;
+            animation: none;
+        }
+
+        @keyframes heartBeat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .result-display {
+            background: linear-gradient(45deg, #f093fb, #f5576c);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 15px 0;
+            display: none;
+            border: 3px solid #fff;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+        }
+
+        .result-display.show {
+            display: block;
+            animation: resultAppear 1s ease;
+        }
+
+        @keyframes resultAppear {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .final-stage {
+            font-size: 3em;
+            font-weight: bold;
+            margin: 15px 0;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.4);
+        }
+
+        .ranking {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+            text-align: left;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .ranking h3 {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .rank-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            font-size: 0.9em;
+        }
+
+        .rank-item:last-child {
+            border-bottom: none;
+        }
+
+        .player-input {
+            background: rgba(255, 255, 255, 0.95);
+            border: 3px solid #667eea;
+            color: #333;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 1.1em;
+            text-align: center;
+            margin: 15px;
+            width: 220px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .start-button {
+            background: linear-gradient(45deg, #2ed573, #26d0ce);
+            border: none;
+            color: white;
+            font-size: 1.4em;
+            font-weight: bold;
+            padding: 15px 30px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 15px;
+            border: 3px solid #fff;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 15px;
+            border-radius: 12px;
+            margin: 15px 0;
+            border: 2px solid #667eea;
+            font-size: 1em;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🎯 フリっ子</h1>
+        
+        <div id="menu" class="menu">
+            <input type="text" id="playerName" class="player-input" placeholder="名前を入力したらスタート" maxlength="8">
+            <br>
+            <button class="start-button" onclick="startGame()">🚀 開始！</button>
+        </div>
+
+        <div id="gameArea" style="display: none;">
+            <div class="status" id="status">振り子が垂直を通る瞬間を狙え！</div>
+            
+            <div class="stats-display">
+                <div class="stat-item">
+                    <h3>🏁 ステージ</h3>
+                    <div class="stat-value" id="currentStage">1</div>
+                </div>
+                <div class="stat-item">
+                    <h3>🎯 範囲</h3>
+                    <div class="stat-value" id="targetAngle">45°</div>
+                </div>
+                <div class="stat-item">
+                    <h3>⚡ 周期</h3>
+                    <div class="stat-value">2.0秒</div>
+                </div>
+                <div class="stat-item">
+                    <h3>❤️ 残機</h3>
+                    <div class="stat-value" id="livesLeft">3</div>
+                </div>
+            </div>
+
+            <div class="pendulum-container" id="pendulumContainer">
+                <div class="pendulum-pivot"></div>
+                <div class="pendulum-string" id="pendulumString">
+                    <div class="pendulum-bob" id="pendulumBob"></div>
+                </div>
+                <div class="target-sector">
+                    <div class="sector-background" id="sectorBackground"></div>
+                </div>
+                <div class="vertical-indicator"></div>
+            </div>
+
+            <button class="tap-button" id="tapButton" onclick="handleTap()">⚖️ タップ！</button>
+
+            <div class="result-display" id="resultDisplay">
+                <h2>🎊 ゲーム終了</h2>
+                <div class="final-stage" id="finalStage">ステージ 0</div>
+                <p id="resultMessage" style="font-size: 1.2em; margin: 15px 0;">お疲れ様でした！</p>
+                <button class="start-button" onclick="resetGame()">🔄 再挑戦</button>
+            </div>
+        </div>
+
+        <div class="ranking" id="ranking">
+            <h3>🏆 ハイスコアランキング</h3>
+            <div id="rankingList">
+                <p style="text-align: center; color: #ccc;">記録なし</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let gameState = {
+            isPlaying: false,
+            currentStage: 1,
+            livesLeft: 3,
+            pendulumAngle: 0,
+            animationId: null,
+            playerName: '',
+            rankings: [],
+            startTime: 0,
+            pendulumPeriod: 2000,
+            pendulumAmplitude: 60
+        };
+
+        function loadRankings() {
+            try {
+                const saved = localStorage.getItem('pendulumPrecisionRankings');
+                if (saved) {
+                    gameState.rankings = JSON.parse(saved);
+                }
+            } catch (e) {
+                gameState.rankings = [];
+            }
+        }
+
+        function startGame() {
+            const nameInput = document.getElementById('playerName');
+            const playerName = nameInput.value.trim();
+            
+            if (!playerName) {
+                alert('プレイヤー名を入力してください！');
+                return;
+            }
+            
+            gameState.playerName = playerName;
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('gameArea').style.display = 'block';
+            
+            resetGameState();
+            startStage();
+        }
+
+        function resetGameState() {
+            gameState.currentStage = 1;
+            gameState.livesLeft = 3;
+            gameState.isPlaying = false;
+            gameState.pendulumAngle = 0;
+            
+            document.getElementById('resultDisplay').classList.remove('show');
+            updateDisplay();
+            updateLivesDisplay();
+        }
+
+        function startStage() {
+            gameState.isPlaying = true;
+            
+            const status = document.getElementById('status');
+            const button = document.getElementById('tapButton');
+            const pendulumContainer = document.getElementById('pendulumContainer');
+            
+            status.textContent = `ステージ ${gameState.currentStage}: 垂直を通る瞬間にタップ！`;
+            button.textContent = '⚖️ タップ！';
+            button.disabled = false;
+            pendulumContainer.classList.add('active');
+            
+            updateSectorDisplay();
+            
+            gameState.pendulumAngle = gameState.pendulumAmplitude;
+            gameState.startTime = performance.now();
+            
+            updateDisplay();
+            startPendulumAnimation();
+        }
+
+        function getSectorAngle() {
+            if (gameState.currentStage === 1) return 45;
+            if (gameState.currentStage <= 8) {
+                // ステージ2-8: 5度ずつ減少 (40, 35, 30, 25, 20, 15, 10)
+                return 45 - (gameState.currentStage - 1) * 5;
+            } else {
+                // ステージ9以降: 10度から1度ずつ減少 (9, 8, 7, 6, 5, 4, 3, 2, 1)
+                return Math.max(1, 10 - (gameState.currentStage - 8));
+            }
+        }
+
+        function updateSectorDisplay() {
+            const sectorAngle = getSectorAngle();
+            const sectorBackground = document.getElementById('sectorBackground');
+            
+            const halfAngle = sectorAngle / 2;
+            const startAngle = 90 - halfAngle;
+            const endAngle = 90 + halfAngle;
+            
+            sectorBackground.style.setProperty('--start-angle', `${startAngle}deg`);
+            sectorBackground.style.setProperty('--end-angle', `${endAngle}deg`);
+        }
+
+        function startPendulumAnimation() {
+            const pendulumString = document.getElementById('pendulumString');
+            const pendulumBob = document.getElementById('pendulumBob');
+            
+            function animate() {
+                if (!gameState.isPlaying) return;
+                
+                const currentTime = performance.now();
+                const elapsed = currentTime - gameState.startTime;
+                
+                const omega = (2 * Math.PI) / gameState.pendulumPeriod;
+                gameState.pendulumAngle = gameState.pendulumAmplitude * Math.cos(omega * elapsed);
+                
+                const isNearVertical = Math.abs(gameState.pendulumAngle) <= 5;
+                if (isNearVertical) {
+                    pendulumBob.classList.add('glowing');
+                } else {
+                    pendulumBob.classList.remove('glowing');
+                }
+                
+                pendulumString.style.transform = `translateX(-50%) rotate(${gameState.pendulumAngle}deg)`;
+                
+                gameState.animationId = requestAnimationFrame(animate);
+            }
+            
+            animate();
+        }
+
+        function handleTap() {
+            if (!gameState.isPlaying) return;
+            
+            gameState.isPlaying = false;
+            if (gameState.animationId) {
+                cancelAnimationFrame(gameState.animationId);
+            }
+            
+            const success = checkSuccess(gameState.pendulumAngle);
+            const status = document.getElementById('status');
+            const button = document.getElementById('tapButton');
+            const pendulumContainer = document.getElementById('pendulumContainer');
+            const pendulumBob = document.getElementById('pendulumBob');
+            
+            pendulumBob.classList.remove('glowing');
+            
+            if (success) {
+                status.textContent = `🎉 成功！ステージ ${gameState.currentStage} クリア！`;
+                button.textContent = '➡️ 次へ';
+                button.style.background = 'linear-gradient(45deg, #2ed573, #26d0ce)';
+                pendulumBob.classList.add('glowing');
+                
+                gameState.currentStage++;
+                
+                setTimeout(() => {
+                    button.style.background = '';
+                    pendulumBob.classList.remove('glowing');
+                    startStage();
+                }, 2000);
+                
+            } else {
+                gameState.livesLeft--;
+                updateLivesDisplay();
+                
+                if (gameState.livesLeft <= 0) {
+                    status.textContent = `💥 ゲームオーバー！`;
+                    button.textContent = '❌ 終了';
+                    button.style.background = 'linear-gradient(45deg, #ff4757, #c44569)';
+                    button.disabled = true;
+                    pendulumContainer.classList.remove('active');
+                    
+                    setTimeout(() => {
+                        showResult();
+                    }, 2000);
+                } else {
+                    const angleError = Math.abs(gameState.pendulumAngle).toFixed(1);
+                    status.textContent = `💥 失敗！残り${gameState.livesLeft}回 (角度: ${angleError}°)`;
+                    button.textContent = '🔄 再挑戦';
+                    button.style.background = 'linear-gradient(45deg, #ff9ff3, #f368e0)';
+                    
+                    setTimeout(() => {
+                        button.style.background = '';
+                        startStage();
+                    }, 2000);
+                }
+            }
+            
+            updateDisplay();
+        }
+
+        function checkSuccess(angle) {
+            const sectorAngle = getSectorAngle();
+            const allowedError = sectorAngle / 2;
+            return Math.abs(angle) <= allowedError;
+        }
+
+        function updateDisplay() {
+            document.getElementById('currentStage').textContent = gameState.currentStage;
+            document.getElementById('targetAngle').textContent = `${getSectorAngle()}°`;
+            document.getElementById('livesLeft').textContent = gameState.livesLeft;
+        }
+
+        function updateLivesDisplay() {
+            const hearts = document.querySelectorAll('.life-heart');
+            hearts.forEach((heart, index) => {
+                if (index < gameState.livesLeft) {
+                    heart.classList.remove('lost');
+                } else {
+                    heart.classList.add('lost');
+                }
+            });
+        }
+
+        function showResult() {
+            const resultDisplay = document.getElementById('resultDisplay');
+            const finalStage = document.getElementById('finalStage');
+            const resultMessage = document.getElementById('resultMessage');
+            
+            const reachedStage = gameState.currentStage - 1;
+            
+            finalStage.textContent = `ステージ ${reachedStage}`;
+            
+            let message = '';
+            if (reachedStage >= 20) {
+                message = '👑 神レベル！人間を超越した精密性！';
+            } else if (reachedStage >= 15) {
+                message = '🌟 超人的！機械のような正確性！';
+            } else if (reachedStage >= 10) {
+                message = '🔥 素晴らしい！非常に高い集中力！';
+            } else if (reachedStage >= 7) {
+                message = '⭐ 上級者！かなりの実力者！';
+            } else if (reachedStage >= 5) {
+                message = '👍 中級者！コツを掴んでいます！';
+            } else if (reachedStage >= 3) {
+                message = '💪 頑張りました！練習で上達しますよ！';
+            } else {
+                message = '😊 お疲れ様！リズムに慣れれば上達します！';
+            }
+            
+            resultMessage.textContent = message;
+            resultDisplay.classList.add('show');
+            
+            addToRanking(gameState.playerName, reachedStage);
+        }
+
+        function addToRanking(name, stage) {
+            const newRecord = { 
+                name: name, 
+                stage: stage,
+                date: new Date().toLocaleDateString() 
+            };
+            
+            gameState.rankings.push(newRecord);
+            gameState.rankings.sort((a, b) => b.stage - a.stage);
+            gameState.rankings = gameState.rankings.slice(0, 8);
+            
+            try {
+                localStorage.setItem('pendulumPrecisionRankings', JSON.stringify(gameState.rankings));
+            } catch (e) {
+                console.log('ランキングの保存に失敗しました');
+            }
+            
+            updateRankingDisplay();
+        }
+
+        function updateRankingDisplay() {
+            const rankingList = document.getElementById('rankingList');
+            
+            if (gameState.rankings.length === 0) {
+                rankingList.innerHTML = '<p style="text-align: center; color: #ccc;">記録なし</p>';
+                return;
+            }
+            
+            rankingList.innerHTML = gameState.rankings
+                .map((record, index) => `
+                    <div class="rank-item">
+                        <span>${index + 1}位: ${record.name}</span>
+                        <span>ステージ ${record.stage}</span>
+                    </div>
+                `).join('');
+        }
+
+        function resetGame() {
+            document.getElementById('menu').style.display = 'block';
+            document.getElementById('gameArea').style.display = 'none';
+            document.getElementById('resultDisplay').classList.remove('show');
+            document.getElementById('playerName').value = '';
+            
+            gameState.pendulumAngle = 0;
+            const pendulumString = document.getElementById('pendulumString');
+            const pendulumBob = document.getElementById('pendulumBob');
+            pendulumString.style.transform = `translateX(-50%) rotate(0deg)`;
+            pendulumBob.classList.remove('glowing');
+        }
+
+        window.addEventListener('load', function() {
+            loadRankings();
+            updateRankingDisplay();
+        });
+    </script>
+</body>
+</html>
